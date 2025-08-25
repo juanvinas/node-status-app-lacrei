@@ -1,0 +1,12 @@
+version: '3.9'
+
+services:
+  app:
+    image: jpablonunes/node-status-app:prod   # 👈 imagem publicada no Docker Hub
+    container_name: node_status_prod
+    ports:
+      - "80:80"   # produção na porta padrão HTTP
+    environment:
+      - NODE_ENV=production
+    restart: always
+
