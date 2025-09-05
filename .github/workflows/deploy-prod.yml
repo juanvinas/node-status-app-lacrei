@@ -1,0 +1,41 @@
+name: Deploy Produção
+
+on:
+  push:
+    branches: [ main ]   # sempre que fizer push na main
+  workflow_dispatch: {}  # também permite rodar manualmente no Actions
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      PROJECT_DIR:  /home/ubuntu/projeto/node-status-app-lacrei  # ajuste se seu projeto está em outro caminho
+      COMPOSE_FILE: docker-compose.prod.yml
+      SSH_USER: ubuntu
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Iniciar ssh-agent com chave PROD
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_PROD_KEY }}
+
+      - name: Deploy na EC2 PROD
+        run: |
+          ssh -o StrictHostKeyChecking=no $SSH_USER@${{ secrets.EC2_PROD_IP }} << 'EOF'
+            set -e
+            cd "$PROJECT_DIR"
+
+            git fetch origin
+            git checkout -f main || git checkout -b main
+            git pull origin main
+
+            docker compose -f $COMPOSE_FILE down
+            docker compose -f $COMPOSE_FILE pull
+            docker compose -f $COMPOSE_FILE up -d --build
+
+            docker ps
+          EOF
